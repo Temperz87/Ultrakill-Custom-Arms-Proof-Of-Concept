@@ -237,18 +237,18 @@ public static class CustomArmController
                     GunControl.Instance.NoWeapon();
                     anim.speed = 0f;
                     ProjectileParryZone ppz = punch.transform.parent.GetComponentInChildren<ProjectileParryZone>();
-                    while (InputManager.Instance.InputSource.Punch.IsPressed)
+                    while (InputManager.Instance.InputSource.Punch.IsPressed && currentArm == vortexArm)
                     {
+                        if (InputManager.Instance.InputSource.ChangeFist.IsPressed)
+                            break;
                         Projectile proj = ppz.CheckParryZone();
                         if (proj != null && !proj.undeflectable && !proj.playerBullet)
                         {
-                            Transform topMostParent = proj.transform;
-                            while (topMostParent.parent != null)
-                                topMostParent = topMostParent.parent;
-                            if (!vortexArm.persistentObjects.Contains(topMostParent.gameObject))
+                            if (!vortexArm.persistentObjects.Contains(proj.gameObject))
                             {
-                                vortexArm.persistentObjects.Add(topMostParent.gameObject);
-                                topMostParent.gameObject.SetActive(false);
+                                vortexArm.persistentObjects.Add(proj.gameObject);
+                                proj.transform.SetParent(null);
+                                proj.gameObject.SetActive(false);
                                 proj.playerBullet = true;
                                 proj.friendly = true;
                                 proj.undeflectable = false;
@@ -259,12 +259,12 @@ public static class CustomArmController
                         }
                         yield return null;
                     }
-                    if (currentFistObject != null)
-                        currentFistObject.SetActive(false);
                     GunControl.Instance.YesWeapon();
                     anim.speed = speed;
+                    if (currentFistObject != null)
+                        currentFistObject.SetActive(false);
                 }
-                punch.StartCoroutine(heldRoutine());
+                FistControl.Instance.StartCoroutine(heldRoutine());
             });
             vortexArm.onSwing.AddListener(delegate (Punch punch)
             {
@@ -426,7 +426,9 @@ public static class CustomArmController
     {
         public static bool Prefix(ref bool __result)
         {
-            __result = currentArm == null || currentArm.canUseDefaultAlt;
+            if (currentArm == null || currentVariation == -1)
+                return true;
+            __result = currentArm.canUseDefaultAlt;
             return __result;
         }
     }
@@ -436,11 +438,12 @@ public static class CustomArmController
     {
         public static bool Prefix()
         {
-            return currentArm == null || currentArm.canUseDefaultAlt;
+            return currentArm == null || currentVariation == -1 || currentArm.canUseDefaultAlt;
         }
+
         public static void Postfix(Projectile proj, Punch __instance)
         {
-            if (currentVariation != -1 && allArms[currentVariation].canUseDefaultAlt)
+            if (currentArm != null && currentArm.canUseDefaultAlt)
             {
                 currentArm.onParry.Invoke(__instance, proj);
             }
@@ -452,18 +455,19 @@ public static class CustomArmController
     {
         public static bool Prefix(Punch __instance)
         {
-            if (currentArm != null && !currentArm.canUseDefaultAlt)
+            if (currentArm != null)
                 currentArm.onStartRedAlt.Invoke(__instance);
             return currentArm == null || currentArm.canUseDefaultAlt;
         }
     }
 
     [HarmonyPatch(typeof(Punch), "Start")]
-    public static class Ensure_MinosTimeNotPersistant
+    public static class Ensure_MinosCustomArm
     {
         public static void Postfix()
         {
             currentVariation = -1;
+            currentArm = null;
             if (currentFistObject)
                 GameObject.Destroy(currentFistObject);
             foreach (CustomArmInfo info in allArms.Values)
