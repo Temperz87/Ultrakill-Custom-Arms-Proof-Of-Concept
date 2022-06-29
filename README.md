@@ -1,2 +1,2 @@
-# Featuring 2 Minos Prime Arms and 2 Gabriel Arms
+# Featuring 5 arm variations
 This "mod" is just a quick and dirty proof of concept that custom arms are totally possible and REALLY easy to inject (however arm logic is still gonna be very tedious), also I was bored, really this was just because I was bored. The arms are only accesible when cheats are turned on, so the cybergrind doesn't save your waves. This mod requires Bepinex to work, and an installation tutorial can be found [here](https://youtu.be/meNiXcbPh_s).
