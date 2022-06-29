@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ultrakill shhhhh", "Ultrakill shhhhh\Ultrakill shhhhh.csproj", "{56509EA9-140E-477C-A3FD-690C6E0125EE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{56509EA9-140E-477C-A3FD-690C6E0125EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56509EA9-140E-477C-A3FD-690C6E0125EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56509EA9-140E-477C-A3FD-690C6E0125EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56509EA9-140E-477C-A3FD-690C6E0125EE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E8663963-8299-43B0-A2F5-BF738620A34F}
+	EndGlobalSection
+EndGlobal
