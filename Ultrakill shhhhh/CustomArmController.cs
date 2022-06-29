@@ -34,11 +34,12 @@ public class Plugin : BaseUnityPlugin
             yield break;
         }
 
-        // Parellel go brrrrrrrrr
+        // Parallel go brrrrrrrrr
         AssetBundleRequest snakeRequest = request.assetBundle.LoadAssetAsync("ProjectileMinosPrime.prefab");
         AssetBundleRequest swingSnakeRequest = request.assetBundle.LoadAssetAsync("MinosPrimeSwingSnake.prefab");
         AssetBundleRequest gabeSpearRequest = request.assetBundle.LoadAssetAsync("GabrielThrownSpear.prefab");
         AssetBundleRequest zweiRequest = request.assetBundle.LoadAssetAsync("GabrielZweihander.prefab");
+        AssetBundleRequest chargeRequest = request.assetBundle.LoadAssetAsync("ProjectileDecorative 2.prefab");
 
         yield return snakeRequest;
         if (snakeRequest.asset == null)
@@ -62,8 +63,13 @@ public class Plugin : BaseUnityPlugin
         if (zweiRequest.asset == null)
             Debug.LogError("Couldn't load the zwei");
         else
-            CustomArmController.gabZweihanderPrefab = zweiRequest.asset as GameObject;
+            CustomArmController.gabeZweihanderPrefab = zweiRequest.asset as GameObject;
 
+        yield return chargeRequest;
+        if (chargeRequest.asset == null)
+            Debug.LogError("Couldn't load the charge projectile prefab");
+        else
+            CustomArmController.chargeProjectilePrefab = chargeRequest.asset as GameObject;
 
         request.assetBundle.Unload(false);
 
@@ -77,14 +83,18 @@ public static class CustomArmController
 {
     public static GameObject currentFistObject; // like if you want v1 holding a zweihander for example
     private static Dictionary<int, CustomArmInfo> allArms = new Dictionary<int, CustomArmInfo>();
+    private static Dictionary<int, CustomArmInfo> allBlueArms = new Dictionary<int, CustomArmInfo>();
+    private static Dictionary<int, CustomArmInfo> allRedArms = new Dictionary<int, CustomArmInfo>();
 
     public static GameObject minosSnakeProjectilePrefab;
     public static GameObject minosSnakeswingPrefab;
     public static GameObject gabeSpearPrefab;
-    public static GameObject gabZweihanderPrefab;
+    public static GameObject gabeZweihanderPrefab;
+    public static GameObject chargeProjectilePrefab;
 
-
-    public static int armVariations;
+    public static CustomArmInfo currentArm;
+    public static int blueArmVariations;
+    public static int redArmVariations;
     public static int currentVariation = -1;
 
     public static void LoadStockArms()
@@ -92,7 +102,7 @@ public static class CustomArmController
         if (minosSnakeProjectilePrefab)
         {
             CustomArmInfo pinosArm = new CustomArmInfo();
-            pinosArm.canParry = false;
+            pinosArm.canUseDefaultAlt = false;
             pinosArm.armColor = new Color(255, 255, 255, 255);
             pinosArm.onSwing.AddListener(delegate (Punch punch)
             {
@@ -110,7 +120,7 @@ public static class CustomArmController
             AddArmInfo(pinosArm);
 
             CustomArmInfo pinosMultiArm = new CustomArmInfo();
-            pinosMultiArm.canParry = false;
+            pinosMultiArm.canUseDefaultAlt = false;
             pinosMultiArm.armColor = new Color32(200, 200, 240, 255);
             pinosMultiArm.onSwing.AddListener(delegate (Punch punch)
             {
@@ -139,7 +149,7 @@ public static class CustomArmController
         if (gabeSpearPrefab)
         {
             CustomArmInfo gabeSpearArm = new CustomArmInfo();
-            gabeSpearArm.canParry = false;
+            gabeSpearArm.canUseDefaultAlt = false;
             gabeSpearArm.armColor = new Color32(255, 241, 122, 255);
             gabeSpearArm.onSwing.AddListener(delegate (Punch punch)
             {
@@ -161,14 +171,14 @@ public static class CustomArmController
             AddArmInfo(gabeSpearArm);
         }
 
-        if (gabZweihanderPrefab)
+        if (gabeZweihanderPrefab)
         {
             CustomArmInfo zweiArm = new CustomArmInfo();
-            zweiArm.canParry = true;
+            zweiArm.canUseDefaultAlt = true;
             zweiArm.armColor = new Color32(255, 255, 144, 255);
             zweiArm.onEquip.AddListener(delegate (FistControl fist)
             {
-                currentFistObject = GameObject.Instantiate(gabZweihanderPrefab, fist.currentArmObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0));
+                currentFistObject = GameObject.Instantiate(gabeZweihanderPrefab, fist.currentArmObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0));
                 currentFistObject.transform.localPosition = new Vector3(-0.35f, 1.26f, 0);
                 currentFistObject.transform.localEulerAngles = Vector3.zero;
                 currentFistObject.transform.localScale = Vector3.one * 6.2409f;
@@ -179,7 +189,7 @@ public static class CustomArmController
                 if (identifier)
                 {
                     identifier.eid.DeliverDamage(identifier.gameObject, punch.transform.forward * 4500, hit, 15f, true, 0f);
-                    GameObject newSword = GameObject.Instantiate(gabZweihanderPrefab);
+                    GameObject newSword = GameObject.Instantiate(gabeZweihanderPrefab);
                     Transform newBreak = newSword.transform.Find("GabrielWeaponBreak");
                     newBreak.SetParent(null);
                     newBreak.position = hit;
@@ -189,29 +199,131 @@ public static class CustomArmController
             });
             AddArmInfo(zweiArm);
         }
+
+        if (chargeProjectilePrefab)
+        {
+            CustomArmInfo vortexArm = new CustomArmInfo();
+            vortexArm.canUseDefaultAlt = false;
+            vortexArm.armColor = new Color32(31, 68, 156, 255);
+            vortexArm.type = FistType.Heavy;
+            vortexArm.onEquip.AddListener(delegate (FistControl fist)
+            {
+                currentFistObject = GameObject.Instantiate(chargeProjectilePrefab, fist.currentArmObject.transform.Find("Armature").Find("clavicle").Find("wrist").Find("hand").Find("Holder (1)"));
+                GameObject.Destroy(currentFistObject.GetComponent<Projectile>());
+                GameObject.Destroy(currentFistObject.transform.Find("Sphere").gameObject);
+                currentFistObject.GetComponent<MeshRenderer>().enabled = false;
+                currentFistObject.transform.Find("ChargeEffect (1)").GetComponent<MeshRenderer>().enabled = false;
+                currentFistObject.transform.localPosition = Vector3.zero;
+                currentFistObject.transform.localEulerAngles = Vector3.zero;
+                currentFistObject.transform.localScale = Vector3.one;
+
+                Transform particleSystem = currentFistObject.transform.Find("ChargeEffect (1)").GetChild(0);
+                particleSystem.localPosition = Vector3.zero;
+                particleSystem.localScale = Vector3.one * 1.25f;
+                currentFistObject.SetActive(false);
+            });
+            vortexArm.onStartRedAlt.AddListener(delegate (Punch punch)
+            {
+                IEnumerator heldRoutine()
+                {
+                    Animator anim = punch.GetComponent<Animator>();
+                    if (anim.speed == 0)
+                        anim.speed = 1;
+                    yield return null;
+                    if (!InputManager.Instance.InputSource.Punch.IsPressed)
+                        yield break;
+                    currentFistObject.SetActive(true);
+                    float speed = anim.speed;
+                    GunControl.Instance.NoWeapon();
+                    anim.speed = 0f;
+                    ProjectileParryZone ppz = punch.transform.parent.GetComponentInChildren<ProjectileParryZone>();
+                    while (InputManager.Instance.InputSource.Punch.IsPressed)
+                    {
+                        Projectile proj = ppz.CheckParryZone();
+                        if (proj != null && !proj.undeflectable && !proj.playerBullet)
+                        {
+                            Transform topMostParent = proj.transform;
+                            while (topMostParent.parent != null)
+                                topMostParent = topMostParent.parent;
+                            if (!vortexArm.persistentObjects.Contains(topMostParent.gameObject))
+                            {
+                                vortexArm.persistentObjects.Add(topMostParent.gameObject);
+                                topMostParent.gameObject.SetActive(false);
+                                proj.playerBullet = true;
+                                proj.friendly = true;
+                                proj.undeflectable = false;
+                                proj.homingType = HomingType.None;
+                                proj.target = null;
+                                proj.hittingPlayer = false;
+                            }
+                        }
+                        yield return null;
+                    }
+                    if (currentFistObject != null)
+                        currentFistObject.SetActive(false);
+                    GunControl.Instance.YesWeapon();
+                    anim.speed = speed;
+                }
+                punch.StartCoroutine(heldRoutine());
+            });
+            vortexArm.onSwing.AddListener(delegate (Punch punch)
+            {
+                if (vortexArm.persistentObjects.Count <= 0)
+                    return;
+                foreach (GameObject persistent in vortexArm.persistentObjects)
+                {
+                    if (persistent == null)
+                        continue;
+                    persistent.transform.position = punch.transform.position + (2f * punch.transform.forward);
+                    persistent.transform.rotation = CameraController.Instance.transform.rotation;
+                    if (CameraFrustumTargeter.Instance.CurrentTarget)
+                        persistent.transform.LookAt(CameraFrustumTargeter.Instance.CurrentTarget.bounds.center);
+                    persistent.SetActive(true);
+                    foreach (Projectile projecile in persistent.GetComponentsInChildren<Projectile>(true))
+                        Traverse.Create(punch).Method("ParryProjectile", new object[] { projecile }).GetValue(projecile);
+                }
+                vortexArm.persistentObjects = new List<GameObject>();
+                TimeController.Instance.ParryFlash();
+            });
+            AddArmInfo(vortexArm);
+        }
     }
 
     public static void AddArmInfo(CustomArmInfo info)
     {
-        allArms.Add(info.variationNumber, info);
-        armVariations++;
+        if (info.type == FistType.Standard)
+        {
+            info.variationNumber = blueArmVariations;
+            allBlueArms.Add(info.variationNumber, info);
+            blueArmVariations++;
+        }
+        else
+        {
+            Debug.Log("adding red arm, variations is " + redArmVariations);
+            info.variationNumber = redArmVariations;
+            allRedArms.Add(info.variationNumber, info);
+            redArmVariations++;
+            Debug.Log("added red arm, variations is " + redArmVariations);
+        }
+        allArms.Add(info.variationNumber + (info.type == FistType.Standard ? 0 : 2048), info); // this solution will work for now, but the day we have 2048 blue arms it won't
     }
 
-    public class CustomArmInfo // Sadly ALL arms currently replace the feedbacker, I'd love to add functionality to replace the Knuckleblaster as well, and maybe even the Whiplash, as well as unlocking conditions
+    public class CustomArmInfo
     {
-        public bool canParry;
+        public bool canUseDefaultAlt;
         public Color armColor;
         public List<GameObject> persistentObjects = new List<GameObject>();
 
+        public int variationNumber;
+        public FistType type;
         public ArmEquipEvent onEquip = new ArmEquipEvent();
         public ArmEvent onDestroy = new ArmEvent();
         public ArmEvent onSwing = new ArmEvent();
         public ArmHitEvent onHit = new ArmHitEvent();
-
-        public int variationNumber { get; private set; } 
+        public ArmEvent onStartRedAlt = new ArmEvent();
+        public ArmParryEvent onParry = new ArmParryEvent();
         public CustomArmInfo()
         {
-            variationNumber = armVariations;
         }
 
         public class ArmEvent : UnityEvent<Punch>
@@ -228,6 +340,12 @@ public static class CustomArmController
         {
 
         }
+
+        public class ArmParryEvent : UnityEvent<Punch, Projectile>
+        {
+
+        }
+
     }
 
     #region HARMONY_PATCHES
@@ -241,12 +359,20 @@ public static class CustomArmController
         {
             if (!CheatsController.Instance.cheatsEnabled)
                 return;
-            if (orderNum == 1 && currentVariation + 1 < armVariations)
+            if (orderNum == 1)
             {
-                orderNum = 0;
+                if (currentVariation + 1 < blueArmVariations)
+                    orderNum = 0;
+                else
+                    currentVariation = -2;
             }
-            else
-                currentVariation = armVariations;
+            else if (orderNum == 0)
+            {
+                if (currentVariation + 1 < redArmVariations)
+                    orderNum = 1;
+                else
+                    currentVariation = -2;
+            }
         }
 
         public static void Postfix(int orderNum, FistControl __instance)
@@ -255,15 +381,41 @@ public static class CustomArmController
                 return;
             if (currentFistObject != null)
                 GameObject.Destroy(currentFistObject);
+
             if (orderNum == 0)
             {
                 currentVariation++;
-                if (currentVariation + 1 > armVariations)
+                if (currentVariation + 1 > blueArmVariations)
+                {
                     currentVariation = -1;
+                    currentArm = null;
+                }
                 else
                 {
-                    __instance.fistIcon.color = allArms[currentVariation].armColor;
-                    allArms[currentVariation].onEquip.Invoke(__instance);
+                    if (allBlueArms.ContainsKey(currentVariation))
+                    {
+                        currentArm = allBlueArms[currentVariation];
+                        __instance.fistIcon.color = currentArm.armColor;
+                        currentArm.onEquip.Invoke(__instance);
+                    }
+                }
+            }
+            else
+            {
+                currentVariation++;
+                if (currentVariation + 1 > redArmVariations)
+                {
+                    currentVariation = -1;
+                    currentArm = null;
+                }
+                else
+                {
+                    if (allRedArms.ContainsKey(currentVariation))
+                    {
+                        currentArm = allRedArms[currentVariation];
+                        __instance.fistIcon.color = currentArm.armColor;
+                        currentArm.onEquip.Invoke(__instance);
+                    }
                 }
             }
         }
@@ -274,7 +426,7 @@ public static class CustomArmController
     {
         public static bool Prefix(ref bool __result)
         {
-            __result = currentVariation == -1 || allArms[currentVariation].canParry;
+            __result = currentArm == null || currentArm.canUseDefaultAlt;
             return __result;
         }
     }
@@ -284,7 +436,25 @@ public static class CustomArmController
     {
         public static bool Prefix()
         {
-            return currentVariation == -1 || allArms[currentVariation].canParry;
+            return currentArm == null || currentArm.canUseDefaultAlt;
+        }
+        public static void Postfix(Projectile proj, Punch __instance)
+        {
+            if (currentVariation != -1 && allArms[currentVariation].canUseDefaultAlt)
+            {
+                currentArm.onParry.Invoke(__instance, proj);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Punch), "BlastCheck")]
+    public static class Ensure_ShockWaveHeld
+    {
+        public static bool Prefix(Punch __instance)
+        {
+            if (currentArm != null && !currentArm.canUseDefaultAlt)
+                currentArm.onStartRedAlt.Invoke(__instance);
+            return currentArm == null || currentArm.canUseDefaultAlt;
         }
     }
 
@@ -297,10 +467,13 @@ public static class CustomArmController
             if (currentFistObject)
                 GameObject.Destroy(currentFistObject);
             foreach (CustomArmInfo info in allArms.Values)
-                    if (info.persistentObjects != null)
-                        foreach (GameObject go in info.persistentObjects)
-                            if (go != null)
-                                GameObject.Destroy(go); // end end end end 
+            {
+                if (info.persistentObjects != null)
+                    foreach (GameObject go in info.persistentObjects)
+                        if (go != null)
+                            GameObject.Destroy(go); // end end end end 
+                info.persistentObjects = new List<GameObject>();
+            }
         }
     }
 
@@ -309,8 +482,8 @@ public static class CustomArmController
     {
         public static void Postfix(Punch __instance)
         {
-            if (currentVariation != -1)
-                allArms[currentVariation].onSwing.Invoke(__instance);
+            if (currentArm != null)
+                currentArm.onSwing.Invoke(__instance);
         }
     }
 
@@ -319,8 +492,8 @@ public static class CustomArmController
     {
         public static void Postfix(Punch __instance, Vector3 point, Transform target)
         {
-            if (currentVariation != -1)
-                allArms[currentVariation].onHit.Invoke(__instance, point, target);
+            if (currentArm != null)
+                currentArm.onHit.Invoke(__instance, point, target);
         }
     }
     #endregion
