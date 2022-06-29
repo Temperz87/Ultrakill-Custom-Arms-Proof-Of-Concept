@@ -165,7 +165,7 @@ public static class CustomArmController
         {
             CustomArmInfo zweiArm = new CustomArmInfo();
             zweiArm.canParry = true;
-            zweiArm.armColor = new Color32(255, 241, 122, 255);
+            zweiArm.armColor = new Color32(255, 255, 144, 255);
             zweiArm.onEquip.AddListener(delegate (FistControl fist)
             {
                 currentFistObject = GameObject.Instantiate(gabZweihanderPrefab, fist.currentArmObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0));
@@ -239,6 +239,8 @@ public static class CustomArmController
     {
         public static void Prefix(ref int orderNum)
         {
+            if (!CheatsController.Instance.cheatsEnabled)
+                return;
             if (orderNum == 1 && currentVariation + 1 < armVariations)
             {
                 orderNum = 0;
@@ -249,6 +251,8 @@ public static class CustomArmController
 
         public static void Postfix(int orderNum, FistControl __instance)
         {
+            if (!CheatsController.Instance.cheatsEnabled)
+                return;
             if (currentFistObject != null)
                 GameObject.Destroy(currentFistObject);
             if (orderNum == 0)
