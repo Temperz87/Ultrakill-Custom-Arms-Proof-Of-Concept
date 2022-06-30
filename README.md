@@ -10,5 +10,5 @@ A sword made out of the divine light, parries charge up a powerful projectile. <
 An arm that creates a vortex which stores projectiles to later be used. <br>
 ![2022-06-30_15-17-45_Trim_AdobeExpress](https://user-images.githubusercontent.com/58375877/176763089-f4a35a52-0c32-499c-a61d-3eeee77942da.gif)
 
-An arm which can be used to mark targets, and later unleash Virtuos attacks on your marks. <br>
+An arm which can be used to mark targets, and later unleash Virtuous attacks on your marks. <br>
 ![2022-06-30_15-15-29_Trim_AdobeExpress](https://user-images.githubusercontent.com/58375877/176762684-821c686c-42c3-4c78-a5d0-f3a03525baad.gif)
