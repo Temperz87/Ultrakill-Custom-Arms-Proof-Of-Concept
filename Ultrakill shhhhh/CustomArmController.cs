@@ -38,7 +38,6 @@ public class Plugin : BaseUnityPlugin
         AssetBundleRequest snakeRequest = request.assetBundle.LoadAssetAsync("ProjectileMinosPrime.prefab");
         AssetBundleRequest minosChargeRequest = request.assetBundle.LoadAssetAsync("MinosProjectileCharge.prefab");
         AssetBundleRequest gabeThrownSpearRequest = request.assetBundle.LoadAssetAsync("GabrielThrownSpear.prefab");
-        AssetBundleRequest gabeSpearRequest = request.assetBundle.LoadAssetAsync("GabrielSpear.prefab");
         AssetBundleRequest gabeBreakRequest = request.assetBundle.LoadAssetAsync("GabrielWeaponBreak.prefab");
         AssetBundleRequest zweiRequest = request.assetBundle.LoadAssetAsync("GabrielZweihander.prefab");
         AssetBundleRequest fireRequest = request.assetBundle.LoadAssetAsync("Fire.prefab");
@@ -62,12 +61,6 @@ public class Plugin : BaseUnityPlugin
             Debug.LogError("Couldn't load the thrown gabe spear");
         else
             CustomArmController.gabeSpearThrownPrefab = gabeThrownSpearRequest.asset as GameObject;
-
-        yield return gabeSpearRequest;
-        if (gabeSpearRequest.asset == null)
-            Debug.LogError("Couldn't load the thrown gabe spear");
-        else
-            CustomArmController.gabeSpearPrefab = gabeSpearRequest.asset as GameObject;
 
         yield return gabeBreakRequest;
         if (gabeBreakRequest.asset == null)
@@ -117,7 +110,6 @@ public static class CustomArmController
     public static GameObject minosSnakeProjectilePrefab;
     public static GameObject minosChargePrefab;
     public static GameObject gabeSpearThrownPrefab;
-    public static GameObject gabeSpearPrefab;
     public static GameObject gabeZweihanderPrefab;
     public static GameObject gabeBreakPrefab;
     public static GameObject firePrefab;
@@ -137,6 +129,7 @@ public static class CustomArmController
             minosMultiArm.canUseDefaultAlt = false;
             minosMultiArm.armColor = new Color32(200, 200, 255, 255);
 
+            int snakesToFire = 1;
             IEnumerator SwingRoutine(Punch punch)
             {
                 Animator anim = punch.GetComponent<Animator>();
@@ -149,7 +142,6 @@ public static class CustomArmController
                 currentFistObject.transform.localPosition = new Vector3(-0.21f, 0.064f, -0.017f);
                 currentFistObject.transform.localEulerAngles = Vector3.zero;
                 currentFistObject.transform.localScale = new Vector3(5f, 5f, 5f);
-                
                 float dt = 0f;
                 while (dt < 0.5f)
                 {
@@ -163,7 +155,7 @@ public static class CustomArmController
                 }
 
                 List<EnemyIdentifier> identifiers = EnemyTracker.Instance.GetCurrentEnemies();
-                for (int i = 1; i <= 9; i++)
+                for (int i = 1; i <= snakesToFire; i++)
                 {
                     GameObject newSnake = GameObject.Instantiate<GameObject>(minosSnakeProjectilePrefab, punch.transform.position + (2f * punch.transform.forward), Quaternion.identity);
                     Projectile projectile = newSnake.GetComponentInChildren<Projectile>();
@@ -191,19 +183,29 @@ public static class CustomArmController
                     newSnake.transform.SetParent(punch.transform);
                     newSnake.transform.localEulerAngles = Vector3.zero;
                     float angle = UnityEngine.Random.Range(2f, 5f);
-                    if (i == 1 || i == 4 || i == 7)
+                    int numpadIdx = i;
+                    if (numpadIdx > 9)
+                        numpadIdx = numpadIdx - 9;
+                    if (CameraFrustumTargeter.Instance.CurrentTarget)
+                        newSnake.transform.LookAt(CameraFrustumTargeter.Instance.CurrentTarget.bounds.center);
+                    else
+                        newSnake.transform.rotation = CameraController.Instance.transform.rotation;
+                    if (numpadIdx == 1 || numpadIdx == 4 || numpadIdx == 7)
                         newSnake.transform.localEulerAngles += new Vector3(1 - angle, 0, 0);
                     angle = UnityEngine.Random.Range(2f, 5f);
-                    if (i == 1 || i == 2 || i == 3)
+                    if (numpadIdx == 1 || numpadIdx == 2 || numpadIdx == 3)
                         newSnake.transform.localEulerAngles += new Vector3(0, 1 - angle, 0);
                     angle = UnityEngine.Random.Range(2f, 5f);
-                    if (i == 3 || i == 6 || i == 9)
+                    if (numpadIdx == 3 || numpadIdx == 6 || numpadIdx == 9)
                         newSnake.transform.localEulerAngles += new Vector3(angle, 0, 0);
                     angle = UnityEngine.Random.Range(2f, 5f);
-                    if (i == 7 || i == 8 || i == 9)
+                    if (numpadIdx == 7 || numpadIdx == 8 || numpadIdx == 9)
                         newSnake.transform.localEulerAngles += new Vector3(0, angle, 0);
                     newSnake.transform.SetParent(null);
                 }
+                if (snakesToFire > 10)
+                    StyleHUD.Instance.AddPoints(100 * (snakesToFire % 10), "<color=#C8C8FF >MULTI SERPENT</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
+                snakesToFire = 1;
 
                 anim.speed = speed;
                 yield break;
@@ -211,8 +213,17 @@ public static class CustomArmController
 
             minosMultiArm.onSwing.AddListener(delegate (Punch punch, bool hitSomething)
             {
-                FistControl.Instance.StartCoroutine(SwingRoutine(punch));    
+                FistControl.Instance.StartCoroutine(SwingRoutine(punch));
             });
+
+
+            minosMultiArm.onHit.AddListener(delegate (Punch punch, Vector3 hit, Transform target)
+            {
+                EnemyIdentifierIdentifier identifier = target.GetComponent<EnemyIdentifierIdentifier>();
+                if (identifier && identifier.eid.dead)
+                    snakesToFire += 2;
+            });
+
             AddArmInfo(minosMultiArm);
         }
 
@@ -220,6 +231,8 @@ public static class CustomArmController
         {
             CustomArmInfo gabeArm = new CustomArmInfo();
             float parriedDamage = 0;
+            const float damageThreshold = 35f;
+
             gabeArm.canUseDefaultAlt = true;
             gabeArm.armColor = new Color32(255, 255, 144, 255);
             gabeArm.onEquip.AddListener(delegate (FistControl fist)
@@ -228,7 +241,7 @@ public static class CustomArmController
                 currentFistObject.transform.localPosition = new Vector3(-0.163f, -0.011f, -0.071f);
                 currentFistObject.transform.localEulerAngles = new Vector3(-58.065f, -29.183f, 3.885f);
                 currentFistObject.transform.localScale = Vector3.one * 0.54699f;
-                if (parriedDamage >= 35 && !currentFistObject.transform.Find("Fire boi"))
+                if (parriedDamage >= damageThreshold && !currentFistObject.transform.Find("Fire boi"))
                 {
                     GameObject fire = GameObject.Instantiate(firePrefab, currentFistObject.transform);
                     fire.transform.localPosition = new Vector3(0f, 0f, 5.87f);
@@ -238,7 +251,7 @@ public static class CustomArmController
             });
             gabeArm.onSwing.AddListener(delegate (Punch punch, bool hitSomething)
             {
-                if (parriedDamage < 50)
+                if (parriedDamage < damageThreshold)
                     return;
                 GameObject newProjectile = null;
                 newProjectile = GameObject.Instantiate<GameObject>(gabeSpearThrownPrefab, punch.transform.position + (2f * punch.transform.forward), CameraController.Instance.transform.rotation);
@@ -249,9 +262,12 @@ public static class CustomArmController
                     projectile.friendly = true;
                     projectile.playerBullet = true;
                     projectile.undeflectable = false;
-                    projectile.damage *= 1.5f;
+                    projectile.damage *= damageThreshold / 2f;
+                    foreach (Explosion explosion in projectile.GetComponentsInChildren<Explosion>(true))
+                        explosion.damage = (int)(damageThreshold / 2f);
                     projectile.homingType = HomingType.None;
                 }
+
                 Traverse.Create(punch).Field("alreadyBoostedProjectile").SetValue(true);
                 parriedDamage = 0;
                 GameObject.Destroy(currentFistObject.transform.Find("Fire Boi").gameObject);
@@ -263,20 +279,22 @@ public static class CustomArmController
             });
             gabeArm.onHit.AddListener(delegate (Punch punch, Vector3 hit, Transform target)
             {
-                //EnemyIdentifierIdentifier identifier = target.GetComponent<EnemyIdentifierIdentifier>();
-                //if (identifier)
-                //{
-                //    //identifier.eid.DeliverDamage(identifier.gameObject, punch.transform.forward * 4500, hit, 15f, true, 0f);
-                //}
                 GameObject newBreak = GameObject.Instantiate(gabeBreakPrefab, punch.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Find("Holder (1)"));
                 newBreak.transform.SetParent(null);
                 newBreak.transform.position = hit;
+                EnemyIdentifierIdentifier identifier = target.GetComponent<EnemyIdentifierIdentifier>();
+                if (identifier)
+                {
+                    identifier.eid.DeliverDamage(identifier.gameObject, punch.transform.forward * 4500, hit, parriedDamage / 3f, true, 0f);
+                }
                 newBreak.transform.GetChild(0).localScale *= 2.5f;
             });
             gabeArm.onParry.AddListener(delegate (Punch punch, Projectile proj)
             {
                 proj.playerBullet = true;
                 parriedDamage += proj.damage;
+                if (proj.damage >= damageThreshold)
+                    StyleHUD.Instance.AddPoints(250, "<color=yellow>INSTA-CHARGE</color>");
                 proj.gameObject.SetActive(false);
                 GameObject newSword = GameObject.Instantiate(gabeZweihanderPrefab);
                 Transform newBreak = newSword.transform.Find("GabrielWeaponBreak");
@@ -284,7 +302,7 @@ public static class CustomArmController
                 newBreak.position = proj.transform.position;
                 newBreak.GetChild(0).localScale *= 2.5f;
                 GameObject.Destroy(newSword);
-                if (parriedDamage >= 35 && !currentFistObject.transform.Find("Fire boi"))
+                if (parriedDamage >= damageThreshold && !currentFistObject.transform.Find("Fire boi"))
                 {
                     GameObject fire = GameObject.Instantiate(firePrefab, currentFistObject.transform);
                     fire.transform.localPosition = new Vector3(0f, 0f, 5.87f);
@@ -293,54 +311,6 @@ public static class CustomArmController
                 }
             });
             AddArmInfo(gabeArm);
-        }
-
-        if (gabeSpearThrownPrefab)
-        {
-            //CustomArmInfo gabeSpearArm = new CustomArmInfo();
-            //gabeSpearArm.canUseDefaultAlt = false;
-            //gabeSpearArm.armColor = new Color32(255, 241, 122, 255);
-            //gabeSpearArm.onEquip.AddListener(delegate (FistControl fist)
-            //{
-            //    if (throwableSpears <= 0)
-            //        return;
-            //    currentFistObject = GameObject.Instantiate(gabeSpearPrefab, fist.currentArmObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Find("Holder (1)"));
-            //    currentFistObject.transform.localPosition = new Vector3(-0.1630003f, -0.011f, -0.071f);
-            //    currentFistObject.transform.localEulerAngles = new Vector3(-58.065f, -29.183f, 3.885f);
-            //    currentFistObject.transform.localScale = Vector3.one * 0.125f;
-            //});
-            //gabeSpearArm.onSwing.AddListener(delegate (Punch punch, bool hitSomething)
-            //{
-            //    if (throwableSpears <= 0)
-            //        return;
-            //    GameObject newProjectile = null;
-            //    newProjectile = GameObject.Instantiate<GameObject>(gabeSpearThrownPrefab, punch.transform.position + (2f * punch.transform.forward), CameraController.Instance.transform.rotation);
-            //    if (CameraFrustumTargeter.Instance.CurrentTarget)
-            //        newProjectile.transform.LookAt(CameraFrustumTargeter.Instance.CurrentTarget.bounds.center);
-            //    foreach (Projectile projectile in newProjectile.GetComponentsInChildren<Projectile>(true))
-            //    {
-            //        projectile.playerBullet = true;
-            //        projectile.friendly = true;
-            //        //projectile.damage = 12f;
-            //        projectile.undeflectable = false;
-            //        projectile.homingType = HomingType.None;
-            //        //projectile.speed *= 2.754f;
-            //    }
-            //    throwableSpears--;
-            //    if (currentFistObject)
-            //    {
-            //        GameObject.Destroy(currentFistObject);
-            //        if (throwableSpears <= 0)
-            //        {
-            //            return;
-            //        }
-            //        currentFistObject = GameObject.Instantiate(gabeSpearPrefab, punch.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Find("Holder (1)"));
-            //        currentFistObject.transform.localPosition = new Vector3(-0.1735f, -0.0289f, -0.0478f);
-            //        currentFistObject.transform.localEulerAngles = new Vector3(54.415f, 167.122f, 189.45f);
-            //        currentFistObject.transform.localScale = Vector3.one * 0.125f;
-            //    }
-            //});
-            //AddArmInfo(gabeSpearArm);
         }
 
         if (chargeProjectilePrefab)
@@ -403,10 +373,10 @@ public static class CustomArmController
                                 proj.target = null;
                                 proj.hittingPlayer = false;
                                 suckedObjects++;
-                                if (suckedObjects == 25)
+                                if (suckedObjects >= 25)
                                 {
                                     suckedObjects = 0;
-                                    StyleHUD.Instance.AddPoints(10, "<color=cyan>HUGE SUCK</color>");
+                                    StyleHUD.Instance.AddPoints(50, "<color=cyan>HUGE SUCK</color>");
                                 }
                             }
                         }
