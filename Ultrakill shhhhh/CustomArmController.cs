@@ -262,9 +262,9 @@ public static class CustomArmController
                     projectile.friendly = true;
                     projectile.playerBullet = true;
                     projectile.undeflectable = false;
-                    projectile.damage *= damageThreshold / 2f;
+                    projectile.damage = damageThreshold / 3f;
                     foreach (Explosion explosion in projectile.GetComponentsInChildren<Explosion>(true))
-                        explosion.damage = (int)(damageThreshold / 2f);
+                        explosion.damage = (int)(damageThreshold / 3f);
                     projectile.homingType = HomingType.None;
                 }
 
