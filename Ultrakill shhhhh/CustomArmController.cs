@@ -340,8 +340,6 @@ public static class CustomArmController
                 IEnumerator heldRoutine()
                 {
                     Animator anim = punch.GetComponent<Animator>();
-                    if (anim.speed == 0)
-                        anim.speed = 1;
                     yield return null;
                     if (!InputManager.Instance.InputSource.Punch.IsPressed)
                         yield break;
@@ -351,6 +349,7 @@ public static class CustomArmController
                     anim.speed = 0f;
                     ProjectileParryZone ppz = punch.transform.parent.GetComponentInChildren<ProjectileParryZone>();
                     int suckedObjects = 0;
+
                     while (InputManager.Instance.InputSource.Punch.IsPressed && currentArm == vortexArm)
                     {
                         if (InputManager.Instance.InputSource.ChangeFist.IsPressed)
@@ -500,6 +499,16 @@ public static class CustomArmController
             });
             AddArmInfo(virtueArm);
         }
+
+        //CustomArmInfo pushyArm = new CustomArmInfo();
+        //pushyArm.canUseDefaultAlt = true;
+        //pushyArm.armColor = new Color32(176, 11, 105, 255);
+        //pushyArm.type = FistType.Heavy;
+        //pushyArm.onStartRedAlt.AddListener(delegate (Punch punch)
+        //{
+        //    NewMovement.Instance.rb.velocity -= 100f * punch.transform.forward;
+        //});
+        //AddArmInfo(pushyArm);   
     }
 
     public static void AddArmInfo(CustomArmInfo info)
@@ -533,35 +542,13 @@ public static class CustomArmController
         public ArmHitEvent onHit = new ArmHitEvent();
         public ArmEvent onStartRedAlt = new ArmEvent();
         public ArmParryEvent onParry = new ArmParryEvent();
-        public CustomArmInfo()
-        {
-        }
 
-        public class ArmEvent : UnityEvent<Punch>
-        {
-
-        }
-
-        public class ArmSwingEvent : UnityEvent<Punch, bool>
-        {
-
-        }
-
-        public class ArmEquipEvent : UnityEvent<FistControl>
-        {
-
-        }
-
-        public class ArmHitEvent : UnityEvent<Punch, Vector3, Transform>
-        {
-
-        }
-
-        public class ArmParryEvent : UnityEvent<Punch, Projectile>
-        {
-
-        }
-
+        public CustomArmInfo() { }
+        public class ArmEvent : UnityEvent<Punch> { }
+        public class ArmSwingEvent : UnityEvent<Punch, bool> { }
+        public class ArmEquipEvent : UnityEvent<FistControl> { }
+        public class ArmHitEvent : UnityEvent<Punch, Vector3, Transform> { }
+        public class ArmParryEvent : UnityEvent<Punch, Projectile> { }
     }
 
     #region HARMONY_PATCHES
