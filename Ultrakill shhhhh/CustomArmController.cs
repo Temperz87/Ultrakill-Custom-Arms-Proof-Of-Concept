@@ -1,48 +1,41 @@
-﻿using BepInEx;
-using HarmonyLib;
+﻿using HarmonyLib;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UMM;
 
-[BepInPlugin("CustomArms", "CustomArms", "1.0.0")]
-
-public class Plugin : BaseUnityPlugin
+[UKPlugin("Custom Arms", "1.3.0", "Custom arms!", false, true)]
+public class CustomArmMod : UKMod
 {
-    public static bool patched = false;
-
-    public void Start()
+    private static Harmony harmony;
+    public override void OnModLoaded()
     {
-        if (!patched) // I've run into issues before with Start running twice and harmony being weird, so I'm resolving that here
-        {
-            Debug.Log("Starting custom arms");
-            new Harmony("tempy.customArms").PatchAll();
-            patched = true;
-            StartCoroutine(LoadStockPrefabs());
-        }
+        Debug.Log("Starting custom arms");
+        harmony = new Harmony("tempy.customArms");
+        harmony.PatchAll();
+        StartCoroutine(LoadStockPrefabs());
+    }
+
+    public override void OnModUnload()
+    {
+        CustomArmController.UnloadArms();
+        harmony.UnpatchSelf();
+        base.OnModUnload();
     }
 
     public IEnumerator LoadStockPrefabs()
     {
-        Debug.Log("Trying to load prefabs from " + Environment.CurrentDirectory + "\\ULTRAKILL_Data\\StreamingAssets\\common");
-        AssetBundleCreateRequest request = AssetBundle.LoadFromFileAsync(Environment.CurrentDirectory + "\\ULTRAKILL_Data\\StreamingAssets\\common");
-        yield return request;
-        if (request.assetBundle == null)
-        {
-            Debug.LogError("Couldn't load the prefabs asset bundle");
-            yield break;
-        }
-
         // Parallel go brrrrrrrrr
-        AssetBundleRequest snakeRequest = request.assetBundle.LoadAssetAsync("ProjectileMinosPrime.prefab");
-        AssetBundleRequest minosChargeRequest = request.assetBundle.LoadAssetAsync("MinosProjectileCharge.prefab");
-        AssetBundleRequest gabeThrownSpearRequest = request.assetBundle.LoadAssetAsync("GabrielThrownSpear.prefab");
-        AssetBundleRequest gabeBreakRequest = request.assetBundle.LoadAssetAsync("GabrielWeaponBreak.prefab");
-        AssetBundleRequest zweiRequest = request.assetBundle.LoadAssetAsync("GabrielZweihander.prefab");
-        AssetBundleRequest fireRequest = request.assetBundle.LoadAssetAsync("Fire.prefab");
-        AssetBundleRequest chargeRequest = request.assetBundle.LoadAssetAsync("ProjectileDecorative 2.prefab");
-        AssetBundleRequest virtueRequest = request.assetBundle.LoadAssetAsync("VirtueInsignia.prefab");
+        AssetBundleRequest snakeRequest = UKAPI.LoadCommonAssetAsync("ProjectileMinosPrime.prefab");
+        AssetBundleRequest minosChargeRequest = UKAPI.LoadCommonAssetAsync("MinosProjectileCharge.prefab");
+        AssetBundleRequest gabeThrownSpearRequest = UKAPI.LoadCommonAssetAsync("GabrielThrownSpear.prefab");
+        AssetBundleRequest gabeBreakRequest = UKAPI.LoadCommonAssetAsync("GabrielWeaponBreak.prefab");
+        AssetBundleRequest zweiRequest = UKAPI.LoadCommonAssetAsync("GabrielZweihander.prefab");
+        AssetBundleRequest fireRequest = UKAPI.LoadCommonAssetAsync("Fire.prefab");
+        AssetBundleRequest chargeRequest = UKAPI.LoadCommonAssetAsync("ProjectileDecorative 2.prefab");
+        AssetBundleRequest virtueRequest = UKAPI.LoadCommonAssetAsync("VirtueInsignia.prefab");
 
         yield return snakeRequest;
         if (snakeRequest.asset == null)
@@ -92,10 +85,7 @@ public class Plugin : BaseUnityPlugin
         else
             CustomArmController.virtueChargePrefab = virtueRequest.asset as GameObject;
 
-        request.assetBundle.Unload(false);
-
         CustomArmController.LoadStockArms();
-
         yield break;
     }
 }
@@ -511,6 +501,15 @@ public static class CustomArmController
         //AddArmInfo(pushyArm);   
     }
 
+    public static void UnloadArms()
+    {
+        GameObject.Destroy(currentFistObject);
+        allArms = new Dictionary<int, CustomArmInfo>();
+        allBlueArms = new Dictionary<int, CustomArmInfo>();
+        allRedArms = new Dictionary<int, CustomArmInfo>();
+        currentVariation = -1;
+    }
+
     public static void AddArmInfo(CustomArmInfo info)
     {
         if (info.type == FistType.Standard)
@@ -560,8 +559,6 @@ public static class CustomArmController
     {
         public static void Prefix(ref int orderNum)
         {
-            if (!CheatsController.Instance.cheatsEnabled)
-                return;
             if (orderNum == 1)
             {
                 if (currentVariation + 1 < blueArmVariations)
@@ -580,8 +577,6 @@ public static class CustomArmController
 
         public static void Postfix(int orderNum, FistControl __instance)
         {
-            if (!CheatsController.Instance.cheatsEnabled)
-                return;
             if (currentFistObject != null)
                 GameObject.Destroy(currentFistObject);
 
