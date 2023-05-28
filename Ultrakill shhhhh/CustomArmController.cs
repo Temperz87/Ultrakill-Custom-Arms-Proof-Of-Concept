@@ -2,11 +2,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UMM;
 using UnityEngine;
 using UnityEngine.Events;
-using UMM;
 
-[UKPlugin("Custom Arms", "1.3.0", "Custom arms!", false, true)]
+[UKPlugin("Custom Arms", "1.5.0", "Custom arms!", false, true)]
 public class CustomArmMod : UKMod
 {
     private static Harmony harmony;
@@ -36,6 +36,7 @@ public class CustomArmMod : UKMod
         AssetBundleRequest fireRequest = UKAPI.LoadCommonAssetAsync("Fire.prefab");
         AssetBundleRequest chargeRequest = UKAPI.LoadCommonAssetAsync("ProjectileDecorative 2.prefab");
         AssetBundleRequest virtueRequest = UKAPI.LoadCommonAssetAsync("VirtueInsignia.prefab");
+        AssetBundleRequest ferrymanRequest = UKAPI.LoadCommonAssetAsync("Ferryman.prefab");
 
         yield return snakeRequest;
         if (snakeRequest.asset == null)
@@ -85,6 +86,12 @@ public class CustomArmMod : UKMod
         else
             CustomArmController.virtueChargePrefab = virtueRequest.asset as GameObject;
 
+        yield return ferrymanRequest;
+        if (ferrymanRequest.asset == null)
+            Debug.LogError("Couldn't load the ferryman prefab");
+        else
+            CustomArmController.oarPrefab = ferrymanRequest.asset as GameObject;
+
         CustomArmController.LoadStockArms();
         yield break;
     }
@@ -105,6 +112,7 @@ public static class CustomArmController
     public static GameObject firePrefab;
     public static GameObject chargeProjectilePrefab;
     public static GameObject virtueChargePrefab;
+    public static GameObject oarPrefab;
 
     public static CustomArmInfo currentArm;
     public static int blueArmVariations;
@@ -163,11 +171,13 @@ public static class CustomArmController
                         if (identifier != null)
                         {
                             foreach (Collider collider in identifier.GetComponentsInChildren<Collider>())
+                            {
                                 if (projectile.target == null || collider.transform.position.y > projectile.target.position.y)
                                 {
                                     projectile.target = collider.transform;
                                     projectile.homingType = HomingType.Gradual;
                                 }
+                            }
                         }
                     }
                     newSnake.transform.SetParent(punch.transform);
@@ -194,7 +204,7 @@ public static class CustomArmController
                     newSnake.transform.SetParent(null);
                 }
                 if (snakesToFire > 10)
-                    StyleHUD.Instance.AddPoints(100 * (snakesToFire % 10), "<color=#C8C8FF >MULTI SERPENT</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
+                    StyleHUD.Instance.AddPoints(100 * (snakesToFire % 10), "<color=#C8C8FF>VORAREPHILIA</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
                 snakesToFire = 1;
 
                 anim.speed = speed;
@@ -215,6 +225,12 @@ public static class CustomArmController
             });
 
             AddArmInfo(minosMultiArm);
+
+            UKAPI.GetKeyBind("Serpent Arm", KeyCode.V).onPerformInScene.AddListener(delegate
+            {
+                while (currentArm != minosMultiArm)
+                    FistControl.Instance.ScrollArm();
+            });
         }
 
         if (gabeZweihanderPrefab && gabeSpearThrownPrefab && firePrefab)
@@ -300,7 +316,13 @@ public static class CustomArmController
                     fire.name = "Fire Boi";
                 }
             });
+
             AddArmInfo(gabeArm);
+            UKAPI.GetKeyBind("ZweiHander Arm", KeyCode.C).onPerformInScene.AddListener(delegate
+            {
+                while (currentArm != gabeArm)
+                    FistControl.Instance.ScrollArm();
+            });
         }
 
         if (chargeProjectilePrefab)
@@ -398,6 +420,11 @@ public static class CustomArmController
                 TimeController.Instance.ParryFlash();
             });
             AddArmInfo(vortexArm);
+            UKAPI.GetKeyBind("Vortex Arm", KeyCode.X).onPerformInScene.AddListener(delegate
+            {
+                while (currentArm != vortexArm)
+                    FistControl.Instance.ScrollArm();
+            });
         }
 
         if (virtueChargePrefab)
@@ -488,6 +515,29 @@ public static class CustomArmController
                 FistControl.Instance.StartCoroutine(heldRoutine(punch));
             });
             AddArmInfo(virtueArm);
+            UKAPI.GetKeyBind("Virtue Arm", KeyCode.V).onPerformInScene.AddListener(delegate
+            {
+                while (currentArm != virtueArm)
+                    FistControl.Instance.ScrollArm();
+            });
+        }
+
+        if (oarPrefab)
+        {
+            CustomArmInfo oarArm = new CustomArmInfo();
+            oarArm.canUseDefaultAlt = false;
+            oarArm.armColor = new Color32(179, 254, 255, 255);
+            oarArm.type = FistType.Standard;
+            oarArm.onStartRedAlt.AddListener(delegate (Punch punch)
+            {
+                NewMovement.Instance.rb.velocity -= 100f * punch.transform.forward;
+            });
+            //AddArmInfo(oarArm);
+            //UKAPI.GetKeyBind("Oar Arm", KeyCode.Z).onPerformInScene.AddListener(delegate
+            //{
+            //    while (currentArm != oarArm)
+            //        FistControl.Instance.ScrollArm();
+            //});
         }
 
         //CustomArmInfo pushyArm = new CustomArmInfo();
