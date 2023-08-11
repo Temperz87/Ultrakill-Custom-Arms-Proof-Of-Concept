@@ -1,20 +1,24 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
+using HarmonyLib;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using UMM;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Events;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
-[UKPlugin("Custom Arms", "1.5.0", "Custom arms!", false, true)]
+
+[UKPlugin("tempy.customArms", "Custom Arms", "1.6.0", "Custom arms or something", false, true)]
 public class CustomArmMod : UKMod
 {
     private static Harmony harmony;
     public override void OnModLoaded()
     {
-        Debug.Log("Starting custom arms");
         harmony = new Harmony("tempy.customArms");
         harmony.PatchAll();
+        UKAPI.DisableCyberGrindSubmission("Mister fister is active!");
         StartCoroutine(LoadStockPrefabs());
     }
 
@@ -22,75 +26,75 @@ public class CustomArmMod : UKMod
     {
         CustomArmController.UnloadArms();
         harmony.UnpatchSelf();
+        UKAPI.RemoveDisableCyberGrindReason("Mister fister is active!");
         base.OnModUnload();
     }
 
     public IEnumerator LoadStockPrefabs()
     {
         // Parallel go brrrrrrrrr
-        AssetBundleRequest snakeRequest = UKAPI.LoadCommonAssetAsync("ProjectileMinosPrime.prefab");
-        AssetBundleRequest minosChargeRequest = UKAPI.LoadCommonAssetAsync("MinosProjectileCharge.prefab");
-        AssetBundleRequest gabeThrownSpearRequest = UKAPI.LoadCommonAssetAsync("GabrielThrownSpear.prefab");
-        AssetBundleRequest gabeBreakRequest = UKAPI.LoadCommonAssetAsync("GabrielWeaponBreak.prefab");
-        AssetBundleRequest zweiRequest = UKAPI.LoadCommonAssetAsync("GabrielZweihander.prefab");
-        AssetBundleRequest fireRequest = UKAPI.LoadCommonAssetAsync("Fire.prefab");
-        AssetBundleRequest chargeRequest = UKAPI.LoadCommonAssetAsync("ProjectileDecorative 2.prefab");
-        AssetBundleRequest virtueRequest = UKAPI.LoadCommonAssetAsync("VirtueInsignia.prefab");
-        AssetBundleRequest ferrymanRequest = UKAPI.LoadCommonAssetAsync("Ferryman.prefab");
+        Debug.Log("Starting to load assets");
+        AsyncOperationHandle snakeRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Projectile Minos Prime Snake.prefab");
+        AsyncOperationHandle minosChargeRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Particles/Enemies/MinosProjectileCharge.prefab");
+        AsyncOperationHandle gabeThrownSpearRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Gabriel/GabrielThrownSpear.prefab");
+        AsyncOperationHandle zweiRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Gabriel/GabrielZweihander.prefab");
+        AsyncOperationHandle fireRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Particles/Fire.prefab");
+        AsyncOperationHandle chargeRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Projectile Decorative 2.prefab");
+        AsyncOperationHandle virtueRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Virtue Insignia.prefab");
+
+        //AsyncOperationHandle turretAimBeamRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Virtue Insignia.prefab");
+        //AsyncOperationHandle turretBeamRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Hitscan Beams/Turret Beam.prefab");
+        //AsyncOperationHandle turretBeepRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Virtue Insignia.prefab");
+        //AsyncOperationHandle turretBeepSoundRequest = Addressables.LoadAssetAsync<GameObject>("Assets/Prefabs/Attacks and Projectiles/Virtue Insignia.prefab");
+        //AsyncOperationHandle ferrymanRequest = Addressables.LoadAssetAsync<GameObject>("Ferryman.prefab");
 
         yield return snakeRequest;
-        if (snakeRequest.asset == null)
+        if (snakeRequest.Result == null)
             Debug.LogError("Couldn't load the snake projectile");
         else
-            CustomArmController.minosSnakeProjectilePrefab = snakeRequest.asset as GameObject;
+            CustomArmController.minosSnakeProjectilePrefab = snakeRequest.Result as GameObject;
 
         yield return minosChargeRequest;
-        if (minosChargeRequest.asset == null)
+        if (minosChargeRequest.Result == null)
             Debug.LogError("Couldn't load minos's charge");
         else
-            CustomArmController.minosChargePrefab = minosChargeRequest.asset as GameObject;
+            CustomArmController.minosChargePrefab = minosChargeRequest.Result as GameObject;
 
         yield return gabeThrownSpearRequest;
-        if (gabeThrownSpearRequest.asset == null)
+        if (gabeThrownSpearRequest.Result == null)
             Debug.LogError("Couldn't load the thrown gabe spear");
         else
-            CustomArmController.gabeSpearThrownPrefab = gabeThrownSpearRequest.asset as GameObject;
-
-        yield return gabeBreakRequest;
-        if (gabeBreakRequest.asset == null)
-            Debug.LogError("Couldn't load the gabe break");
-        else
-            CustomArmController.gabeBreakPrefab = gabeBreakRequest.asset as GameObject;
+            CustomArmController.gabeSpearThrownPrefab = gabeThrownSpearRequest.Result as GameObject;
 
         yield return zweiRequest;
-        if (zweiRequest.asset == null)
+        if (zweiRequest.Result == null)
             Debug.LogError("Couldn't load the zwei");
         else
-            CustomArmController.gabeZweihanderPrefab = zweiRequest.asset as GameObject;
+            CustomArmController.gabeZweihanderPrefab = zweiRequest.Result as GameObject;
 
         yield return fireRequest;
-        if (fireRequest.asset == null)
+        if (fireRequest.Result == null)
             Debug.LogError("Couldn't load the fire prefab");
         else
-            CustomArmController.firePrefab = fireRequest.asset as GameObject;
+            CustomArmController.firePrefab = fireRequest.Result as GameObject;
 
         yield return chargeRequest;
-        if (chargeRequest.asset == null)
+        if (chargeRequest.Result == null)
             Debug.LogError("Couldn't load the charge projectile prefab");
         else
-            CustomArmController.chargeProjectilePrefab = chargeRequest.asset as GameObject;
+            CustomArmController.chargeProjectilePrefab = chargeRequest.Result as GameObject;
 
         yield return virtueRequest;
-        if (virtueRequest.asset == null)
+        if (virtueRequest.Result == null)
             Debug.LogError("Couldn't load the virtue charge prefab");
         else
-            CustomArmController.virtueChargePrefab = virtueRequest.asset as GameObject;
+            CustomArmController.virtueChargePrefab = virtueRequest.Result as GameObject;
 
-        yield return ferrymanRequest;
-        if (ferrymanRequest.asset == null)
-            Debug.LogError("Couldn't load the ferryman prefab");
-        else
-            CustomArmController.oarPrefab = ferrymanRequest.asset as GameObject;
+        //yield return ferrymanRequest;
+        //if (ferrymanRequest.Result == null)
+        //Debug.LogError("Couldn't load the ferryman prefab");
+        //else
+        //CustomArmController.oarPrefab = ferrymanRequest.Result as GameObject;
 
         CustomArmController.LoadStockArms();
         yield break;
@@ -108,7 +112,6 @@ public static class CustomArmController
     public static GameObject minosChargePrefab;
     public static GameObject gabeSpearThrownPrefab;
     public static GameObject gabeZweihanderPrefab;
-    public static GameObject gabeBreakPrefab;
     public static GameObject firePrefab;
     public static GameObject chargeProjectilePrefab;
     public static GameObject virtueChargePrefab;
@@ -127,7 +130,7 @@ public static class CustomArmController
             minosMultiArm.canUseDefaultAlt = false;
             minosMultiArm.armColor = new Color32(200, 200, 255, 255);
 
-            int snakesToFire = 1;
+            float snakesToFire = 1;
             IEnumerator SwingRoutine(Punch punch)
             {
                 Animator anim = punch.GetComponent<Animator>();
@@ -146,6 +149,7 @@ public static class CustomArmController
                     if (InputManager.Instance.InputSource.ChangeFist.IsPressed || !InputManager.Instance.InputSource.Punch.IsPressed || currentArm != minosMultiArm)
                     {
                         anim.speed = speed;
+                        yield return new WaitForSeconds(0.1f);
                         yield break;
                     }
                     dt += Time.deltaTime;
@@ -203,8 +207,8 @@ public static class CustomArmController
                         newSnake.transform.localEulerAngles += new Vector3(0, angle, 0);
                     newSnake.transform.SetParent(null);
                 }
-                if (snakesToFire > 10)
-                    StyleHUD.Instance.AddPoints(100 * (snakesToFire % 10), "<color=#C8C8FF>VORAREPHILIA</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
+                if (snakesToFire >= 9)
+                    StyleHUD.Instance.AddPoints((int)(100 * (snakesToFire % 10)), "<color=#C8C8FF>Asclepieion</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
                 snakesToFire = 1;
 
                 anim.speed = speed;
@@ -220,8 +224,14 @@ public static class CustomArmController
             minosMultiArm.onHit.AddListener(delegate (Punch punch, Vector3 hit, Transform target)
             {
                 EnemyIdentifierIdentifier identifier = target.GetComponent<EnemyIdentifierIdentifier>();
-                if (identifier && identifier.eid.dead)
-                    snakesToFire += 2;
+                if (identifier)
+                {
+                    identifier.eid.DeliverDamage(identifier.gameObject, punch.transform.forward * 4500, hit, .75f, true, 0f); // normal blue punches do 1 damage so we're just adding onto that
+                    if (identifier.eid.dead)
+                        snakesToFire += 2;
+                    else
+                        snakesToFire += .5f;
+                }
             });
 
             AddArmInfo(minosMultiArm);
@@ -278,15 +288,14 @@ public static class CustomArmController
                 parriedDamage = 0;
                 GameObject.Destroy(currentFistObject.transform.Find("Fire Boi").gameObject);
 
-                GameObject newBreak = GameObject.Instantiate(gabeBreakPrefab, punch.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Find("Holder (1)"));
+                Transform newBreak = GameObject.Instantiate(currentFistObject.GetComponent<BreakParticle>().particle).transform;
                 newBreak.transform.position = new Vector3(-0.163f, -0.011f, -0.071f);
                 newBreak.transform.GetChild(0).localScale *= 2.5f;
-                newBreak.transform.SetParent(null);
             });
             gabeArm.onHit.AddListener(delegate (Punch punch, Vector3 hit, Transform target)
             {
-                GameObject newBreak = GameObject.Instantiate(gabeBreakPrefab, punch.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).Find("Holder (1)"));
-                newBreak.transform.SetParent(null);
+                Transform newBreak = GameObject.Instantiate(currentFistObject.GetComponent<BreakParticle>().particle).transform;
+                //newBreak.GetChild(0).localScale *= 2.5f;
                 newBreak.transform.position = hit;
                 EnemyIdentifierIdentifier identifier = target.GetComponent<EnemyIdentifierIdentifier>();
                 if (identifier)
@@ -520,24 +529,6 @@ public static class CustomArmController
                 while (currentArm != virtueArm)
                     FistControl.Instance.ScrollArm();
             });
-        }
-
-        if (oarPrefab)
-        {
-            CustomArmInfo oarArm = new CustomArmInfo();
-            oarArm.canUseDefaultAlt = false;
-            oarArm.armColor = new Color32(179, 254, 255, 255);
-            oarArm.type = FistType.Standard;
-            oarArm.onStartRedAlt.AddListener(delegate (Punch punch)
-            {
-                NewMovement.Instance.rb.velocity -= 100f * punch.transform.forward;
-            });
-            //AddArmInfo(oarArm);
-            //UKAPI.GetKeyBind("Oar Arm", KeyCode.Z).onPerformInScene.AddListener(delegate
-            //{
-            //    while (currentArm != oarArm)
-            //        FistControl.Instance.ScrollArm();
-            //});
         }
 
         //CustomArmInfo pushyArm = new CustomArmInfo();
