@@ -19,7 +19,7 @@ public class ThundergunShockWave : MonoBehaviour
     }
     private void CheckCollision(Collider col)
     {
-        if (col.gameObject.layer == 10)
+        if (col.gameObject.layer == 14)
         {
             EnemyIdentifierIdentifier enemyIdentifierIdentifier = col.gameObject.GetComponent<EnemyIdentifierIdentifier>();
             if (enemyIdentifierIdentifier != null && enemyIdentifierIdentifier.eid != null)

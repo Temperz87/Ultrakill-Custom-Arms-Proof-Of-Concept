@@ -130,7 +130,9 @@ public static class CustomArmController
             minosMultiArm.canUseDefaultAlt = false;
             minosMultiArm.armColor = new Color32(200, 200, 255, 255);
 
-            float snakesToFire = 1;
+
+            const float initSnakesToFire = 3;
+            float snakesToFire = initSnakesToFire;
             IEnumerator SwingRoutine(Punch punch)
             {
                 Animator anim = punch.GetComponent<Animator>();
@@ -166,7 +168,11 @@ public static class CustomArmController
                     projectile.damage = 4f;
                     projectile.undeflectable = false;
                     projectile.homingType = HomingType.None;
-                    if (identifiers.Count > 0)
+
+
+                    if (CameraFrustumTargeter.Instance.CurrentTarget && CameraFrustumTargeter.Instance.CurrentTarget.TryGetComponent<EnemyIdentifier>(out _))
+                        projectile.target = CameraFrustumTargeter.Instance.CurrentTarget.transform;
+                    else if (identifiers.Count > 0)
                     {
                         int toUse = i;
                         while (toUse >= identifiers.Count)
@@ -207,9 +213,12 @@ public static class CustomArmController
                         newSnake.transform.localEulerAngles += new Vector3(0, angle, 0);
                     newSnake.transform.SetParent(null);
                 }
+
+                /*
                 if (snakesToFire >= 9)
                     StyleHUD.Instance.AddPoints((int)(100 * (snakesToFire % 10)), "<color=#C8C8FF>Asclepieion</color>"); // for example, if i fire 20-29 snakes then it'll add 200 points, cuz remainder moment
-                snakesToFire = 1;
+                */
+                snakesToFire = initSnakesToFire;
 
                 anim.speed = speed;
                 yield break;
@@ -228,9 +237,12 @@ public static class CustomArmController
                 {
                     identifier.eid.DeliverDamage(identifier.gameObject, punch.transform.forward * 4500, hit, .75f, true, 0f); // normal blue punches do 1 damage so we're just adding onto that
                     if (identifier.eid.dead)
-                        snakesToFire += 2;
+                        snakesToFire = 9;
                     else
-                        snakesToFire += .5f;
+                    {
+                        if (snakesToFire < 9)
+                            snakesToFire += 1f;
+                    }
                 }
             });
 
@@ -304,7 +316,7 @@ public static class CustomArmController
                 }
                 newBreak.transform.GetChild(0).localScale *= 2.5f;
             });
-            gabeArm.onParry.AddListener(delegate (Punch punch, Projectile proj)
+            gabeArm.onParryProjectile.AddListener(delegate (Punch punch, Projectile proj)
             {
                 proj.playerBullet = true;
                 parriedDamage += proj.damage;
@@ -330,6 +342,63 @@ public static class CustomArmController
             UKAPI.GetKeyBind("ZweiHander Arm", KeyCode.C).onPerformInScene.AddListener(delegate
             {
                 while (currentArm != gabeArm)
+                    FistControl.Instance.ScrollArm();
+            });
+        }
+
+        if (false)
+        {
+            CustomArmInfo tempestArm = new CustomArmInfo();
+            tempestArm.canUseDefaultAlt = false;
+            tempestArm.armColor = new Color32(245, 226, 15, 255);
+            tempestArm.type = FistType.Standard;
+
+
+
+            tempestArm.onSwing.AddListener((punch, hitSomething) =>
+            {
+                int mask = (1 << 14) | (1 << 10) | (1 << 11); // 14 is the layer for projectiles, 10 for libs, 11 for big limbs, basically masking for projectiles and enemies
+
+                Collider[] colliders = Physics.OverlapSphere(CameraController.Instance.GetDefaultPos(), 8.5f, mask);
+                List<EnemyIdentifierIdentifier> hitEids = new List<EnemyIdentifierIdentifier>();
+                List<Projectile> hitProjectiles = new List<Projectile>();
+
+                foreach (Collider col in colliders)
+                {
+                    EnemyIdentifierIdentifier eidid = col.GetComponentInParent<EnemyIdentifierIdentifier>();
+                    if (eidid != null && !hitEids.Contains(eidid))
+                    {
+                        hitEids.Add(eidid);
+                        if (eidid.eid.bigEnemy)
+                            continue;
+                        Vector3 forceDirection = (col.transform.position - CameraController.Instance.GetDefaultPos()).normalized;
+
+                        eidid.eid.DeliverDamage(eidid.gameObject, forceDirection * 3000f, col.transform.position, 0, false);
+                    }
+                    else
+                    {
+                        Projectile proj = col.GetComponentInParent<Projectile>();
+                        if (proj != null && !hitProjectiles.Contains(proj))
+                        {
+                            hitProjectiles.Add(proj);
+                            if (proj.playerBullet || proj.friendly)
+                                continue;
+
+                            proj.homingType = HomingType.None;
+                            proj.speed *= 1.5f;
+                            proj.friendly = true;
+                            proj.hittingPlayer = false;
+
+                            proj.transform.Rotate(0f, 180f, 0f, Space.Self);
+                        }
+                    }
+                }
+            });
+
+            AddArmInfo(tempestArm);
+            UKAPI.GetKeyBind("Tempest Arm", KeyCode.H).onPerformInScene.AddListener(delegate
+            {
+                while (currentArm != tempestArm)
                     FistControl.Instance.ScrollArm();
             });
         }
@@ -402,6 +471,26 @@ public static class CustomArmController
                         }
                         yield return null;
                     }
+
+
+                    if (vortexArm.persistentObjects.Count > 0)
+                    {
+                        foreach (GameObject persistent in vortexArm.persistentObjects)
+                        {
+                            if (persistent == null)
+                                continue;
+                            persistent.transform.position = punch.transform.position + (2f * punch.transform.forward);
+                            persistent.transform.rotation = CameraController.Instance.transform.rotation;
+                            if (CameraFrustumTargeter.Instance.CurrentTarget)
+                                persistent.transform.LookAt(CameraFrustumTargeter.Instance.CurrentTarget.bounds.center);
+                            persistent.SetActive(true);
+                            foreach (Projectile projecile in persistent.GetComponentsInChildren<Projectile>(true))
+                                Traverse.Create(punch).Method("ParryProjectile", new object[] { projecile }).GetValue(projecile);
+                        }
+                        vortexArm.persistentObjects.Clear();
+                        TimeController.Instance.ParryFlash();
+                    }
+
                     GunControl.Instance.YesWeapon();
                     anim.speed = speed;
                     if (currentFistObject != null)
@@ -425,11 +514,11 @@ public static class CustomArmController
                     foreach (Projectile projecile in persistent.GetComponentsInChildren<Projectile>(true))
                         Traverse.Create(punch).Method("ParryProjectile", new object[] { projecile }).GetValue(projecile);
                 }
-                vortexArm.persistentObjects = new List<GameObject>();
+                vortexArm.persistentObjects.Clear();
                 TimeController.Instance.ParryFlash();
             });
             AddArmInfo(vortexArm);
-            UKAPI.GetKeyBind("Vortex Arm", KeyCode.X).onPerformInScene.AddListener(delegate
+            UKAPI.GetKeyBind("Vortex Arm", KeyCode.T).onPerformInScene.AddListener(delegate
             {
                 while (currentArm != vortexArm)
                     FistControl.Instance.ScrollArm();
@@ -531,6 +620,19 @@ public static class CustomArmController
             });
         }
 
+
+        UKAPI.GetKeyBind("Feedbacker", KeyCode.Z).onPerformInScene.AddListener(delegate
+        {
+            while (currentArm != null && FistControl.Instance.currentPunch.type != FistType.Standard)
+                FistControl.Instance.ScrollArm();
+        });
+
+        UKAPI.GetKeyBind("Knuckle Blaster", KeyCode.B).onPerformInScene.AddListener(delegate
+        {
+            while (currentArm != null && FistControl.Instance.currentPunch.type != FistType.Heavy)
+                FistControl.Instance.ScrollArm();
+        });
+
         //CustomArmInfo pushyArm = new CustomArmInfo();
         //pushyArm.canUseDefaultAlt = true;
         //pushyArm.armColor = new Color32(176, 11, 105, 255);
@@ -581,6 +683,7 @@ public static class CustomArmController
         public ArmSwingEvent onSwing = new ArmSwingEvent();
         public ArmHitEvent onHit = new ArmHitEvent();
         public ArmEvent onStartRedAlt = new ArmEvent();
+        public ArmParryProjectileEvent onParryProjectile = new ArmParryProjectileEvent();
         public ArmParryEvent onParry = new ArmParryEvent();
 
         public CustomArmInfo() { }
@@ -588,7 +691,8 @@ public static class CustomArmController
         public class ArmSwingEvent : UnityEvent<Punch, bool> { }
         public class ArmEquipEvent : UnityEvent<FistControl> { }
         public class ArmHitEvent : UnityEvent<Punch, Vector3, Transform> { }
-        public class ArmParryEvent : UnityEvent<Punch, Projectile> { }
+        public class ArmParryProjectileEvent : UnityEvent<Punch, Projectile> { }
+        public class ArmParryEvent : UnityEvent<Punch, EnemyIdentifier> { }
     }
 
     #region HARMONY_PATCHES
@@ -660,18 +764,6 @@ public static class CustomArmController
         }
     }
 
-    [HarmonyPatch(typeof(Punch), "CheckForProjectile")]
-    public static class Ensure_CorrectParry
-    {
-        public static bool Prefix(ref bool __result)
-        {
-            if (currentArm == null || currentVariation == -1)
-                return true;
-            __result = currentArm.canUseDefaultAlt;
-            return __result;
-        }
-    }
-
     [HarmonyPatch(typeof(Punch), "ParryProjectile")]
     public static class Ensure_CorrectParryProjectile
     {
@@ -684,7 +776,24 @@ public static class CustomArmController
         {
             if (currentArm != null && currentArm.canUseDefaultAlt)
             {
-                currentArm.onParry.Invoke(__instance, proj);
+                currentArm.onParryProjectile.Invoke(__instance, proj);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Punch), "Parry")]
+    public static class Ensure_CorrectParry
+    {
+        public static bool Prefix()
+        {
+            return currentArm == null || currentVariation == -1 || currentArm.canUseDefaultAlt;
+        }
+
+        public static void Postfix(EnemyIdentifier eid, Punch __instance)
+        {
+            if (currentArm != null && currentArm.canUseDefaultAlt)
+            {
+                currentArm.onParry.Invoke(__instance, eid);
             }
         }
     }
